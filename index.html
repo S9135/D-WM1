@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DiaBeatWeight Tracker</title>
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#0284c7">
+  <!-- Tailwind CSS CDN for styling -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    body { -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen overflow-x-hidden">
+
+  <!-- ================= ONBOARDING MODAL ================= -->
+  <div id="onboarding-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+      
+      <!-- Step 1: Welcome -->
+      <div id="step-1" class="space-y-4">
+        <h2 class="text-2xl font-bold text-sky-700">Welcome to DiaBeatWeight</h2>
+        <p class="text-sm text-slate-500">Let's set up your secure local profile to manage your diabetes and weight goals safely.</p>
+        <div>
+          <label class="block text-sm font-medium mb-1">Full Name</label>
+          <input type="text" id="user-name" placeholder="John Doe" class="w-full min-h-[48px] px-3 border border-slate-300 rounded-lg focus:outline-sky-500">
+        </div>
+        <button onclick="nextStep(2)" class="w-full min-h-[48px] bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700 transition">Continue</button>
+      </div>
+
+      <!-- Step 2: Biometrics -->
+      <div id="step-2" class="hidden space-y-4">
+        <h2 class="text-xl font-bold text-sky-700">Your Biometrics</h2>
+        <p class="text-xs text-slate-500">We use these to calculate your metabolic floor (BMR). Plans never drop below your baseline safety energy needs.</p>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium mb-1">Age (Years)</label>
+            <input type="number" id="user-age" class="w-full min-h-[48px] px-3 border border-slate-300 rounded-lg">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Sex</label>
+            <select id="user-sex" class="w-full min-h-[48px] px-3 border border-slate-300 rounded-lg">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Weight (kg)</label>
+            <input type="number" id="user-weight" class="w-full min-h-[48px] px-3 border border-slate-300 rounded-lg">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Height (cm)</label>
+            <input type="number" id="user-height" class="w-full min-h-[48px] px-3 border border-slate-300 rounded-lg">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Activity Level</label>
+          <select id="user-activity" class="w-full min-h-[48px] px-3 border border-slate-300 rounded-lg">
+            <option value="1.2">Sedentary (Little to no exercise)</option>
+            <option value="1.375">Lightly Active (Light exercise 1-3 days/wk)</option>
+            <option value="1.55">Moderately Active (Moderate exercise 3-5 days/wk)</option>
+            <option value="1.725">Very Active (Hard exercise 6-7 days/wk)</option>
+          </select>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="nextStep(1)" class="w-1/2 min-h-[48px] bg-slate-200 rounded-lg">Back</button>
+          <button onclick="processBiometrics()" class="w-1/2 min-h-[48px] bg-sky-600 text-white font-semibold rounded-lg">Next</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Clinical Screening -->
+      <div id="step-3" class="hidden space-y-4">
+        <h2 class="text-xl font-bold text-sky-700">Clinical Screening</h2>
+        <div>
+          <label class="block text-sm font-medium mb-1">Diagnosis Status</label>
+          <select id="user-diagnosis" class="w-full min-h-[48px] px-3 border border-slate-300 rounded-lg">
+            <option value="t2d">Type 2 Diabetes</option>
+            <option value="prediabetes">Prediabetes</option>
+            <option value="none">None / Weight Management Only</option>
+          </select>
+        </div>
+        <div class="space-y-2">
+          <label class="block text-sm font-medium">Are you prescribed any of the following? (Select all)</label>
+          <label class="flex items-center gap-3 p-2 border border-slate-200 rounded-lg min-h-[48px]">
+            <input type="checkbox" id="med-insulin" class="w-5 h-5"> <span>Insulin</span>
+          </label>
+          <label class="flex items-center gap-3 p-2 border border-slate-200 rounded-lg min-h-[48px]">
+            <input type="checkbox" id="med-sulf" class="w-5 h-5"> <span>Sulfonylureas (e.g. Glipizide)</span>
+          </label>
+          <label class="flex items-center gap-3 p-2 border border-slate-200 rounded-lg min-h-[48px]">
+            <input type="checkbox" id="med-glp" class="w-5 h-5"> <span>GLP-1 Agonists (e.g. Ozempic)</span>
+          </label>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="nextStep(2)" class="w-1/2 min-h-[48px] bg-slate-200 rounded-lg">Back</button>
+          <button onclick="saveOnboarding()" class="w-1/2 min-h-[48px] bg-emerald-600 text-white font-semibold rounded-lg">Finish Setup</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= SAFETY WARNING ALERTS (MODAL) ================= -->
+  <div id="safety-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-6 text-center space-y-4">
+      <div id="safety-icon" class="text-4xl">🚨</div>
+      <h3 id="safety-title" class="text-xl font-bold text-red-600">Warning</h3>
+      <p id="safety-message" class="text-sm text-slate-600 font-medium"></p>
+      <div id="timer-display" class="text-2xl font-mono font-bold text-slate-700 hidden">15:00</div>
+      <button onclick="closeSafetyModal()" class="w-full min-h-[48px] bg-slate-800 text-white rounded-lg font-medium">Acknowledge</button>
+    </div>
+  </div>
+
+  <!-- ================= MAIN APP DASHBOARD ================= -->
+  <header class="bg-sky-600 text-white px-4 py-4 shadow-md">
+    <div class="max-w-4xl mx-auto flex justify-between items-center">
+      <h1 class="text-xl font-bold tracking-tight">DiaBeatWeight</h1>
+      <span id="display-name" class="text-sm bg-sky-700 px-3 py-1 rounded-full font-medium">Guest</span>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+    
+    <!-- Feature 1: Glucose Tracker -->
+    <section class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 space-y-3">
+      <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2">🩸 Blood Glucose Logger</h2>
+      <div class="flex gap-2">
+        <input type="number" id="glucose-input" placeholder="e.g. 110 mg/dL" class="w-2/3 min-h-[48px] px-3 border border-slate-300 rounded-lg">
+        <button onclick="logGlucose()" class="w-1/3 min-h-[48px] bg-sky-600 text-white font-medium rounded-lg">Log</button>
+      </div>
+      <div id="glucose-history" class="text-sm text-slate-500 pt-1">Latest Log: None logged today</div>
+    </section>
+
+    <!-- Feature 2: Meal Tracker & Plate Method Info -->
+    <section class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 space-y-3">
+      <h2 class="text-lg font-bold text-slate-700">🥗 Plate Method & Fiber Tracker</h2>
+      <div class="bg-emerald-50 text-emerald-800 text-xs p-3 rounded-xl border border-emerald-100 leading-relaxed">
+        <strong>The Ideal Diabetic Plate:</strong> Fill 1/2 with non-starchy veggies, 1/4 with lean protein, and 1/4 with complex carbohydrates.
+      </div>
+      <div class="space-y-2">
+        <input type="text" id="food-name" placeholder="Meal Name" class="w-full min-h-[48px] px-3 border border-slate-300 rounded-lg">
+        <div class="grid grid-cols-3 gap-2">
+          <input type="number" id="food-cal" placeholder="Calories" class="min-h-[48px] px-2 border border-slate-300 rounded-lg text-sm">
+          <input type="number" id="food-carbs" placeholder="Carbs (g)" class="min-h-[48px] px-2 border border-slate-300 rounded-lg text-sm">
+          <input type="number" id="food-fiber" placeholder="Fiber (g)" class="min-h-[48px] px-2 border border-slate-300 rounded-lg text-sm">
+        </div>
+        <button onclick="logMeal()" class="w-full min-h-[48px] bg-emerald-600 text-white font-medium rounded-lg">Log Meal Data</button>
+      </div>
+      <div class="pt-2 text-sm space-y-1">
+        <div class="flex justify-between"><span>Calories Eaten:</span> <span id="summary-cal" class="font-bold">0 kcal</span></div>
+        <div class="flex justify-between"><span>Total Fiber:</span> <span id="summary-fiber" class="font-bold">0 g</span></div>
+        <div id="fiber-tip" class="text-xs text-amber-700 bg-amber-50 p-2 rounded-lg hidden border border-amber-100 mt-2"></div>
+      </div>
+    </section>
+
+    <!-- Feature 3: Exercise Clearance Module -->
+    <section class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 space-y-4">
+      <h2 class="text-lg font-bold text-slate-700">🏋️‍♂️ Safe Activity Monitor</h2>
+      <button onclick="checkExerciseSafety()" class="w-full min-h-[48px] bg-amber-500 text-white font-semibold rounded-lg shadow-sm">
+        Run Pre-Workout Safety Check
+      </button>
+      <div id="clearance-output" class="text-sm font-medium p-3 rounded-xl bg-slate-100 border border-slate-200 text-center hidden"></div>
+      
+      <div class="space-y-2">
+        <h3 class="font-semibold text-sm text-slate-600">Today's Safe Metabolism Workout (RIR Focus)</h3>
+        <ul class="space-y-2 text-sm">
+          <li class="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
+            <span>Dumbbell Goblet Squats (3 Sets x 10 Reps) <br><small class="text-slate-400">Target effort: 2 Reps in Reserve (RIR)</small></span>
+          </li>
+          <li class="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
+            <span>Seated Cable Rows (3 Sets x 12 Reps) <br><small class="text-slate-400">Target effort: 2 Reps in Reserve (RIR)</small></span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+  <script>
+    let currentStep = 1;
+    let latestGlucose = null;
+    let dailyCalories = 0;
+    let dailyFiber = 0;
+    let safetyTimer = null;
+
+    // Check if user already completed onboarding
+    window.addEventListener('load', () => {
+      const profile = localStorage.getItem('user_profile');
+      if (profile) {
+        document.getElementById('onboarding-modal').classList.add('hidden');
+        loadDashboard();
+      }
+    });
+
+    function nextStep(step) {
+      document.getElementById(`step-${currentStep}`).classList.add('hidden');
+      document.getElementById(`step-${step}`).classList.remove('hidden');
+      currentStep = step;
+    }
+
+    function processBiometrics() {
+      const age = parseFloat(document.getElementById('user-age').value);
+      const weight = parseFloat(document.getElementById('user-weight').value);
+      const height = parseFloat(document.getElementById('user-height').value);
+      
+      if (!age || !weight || !height) {
+        alert("Please complete all biometric fields correctly.");
+        return;
+      }
+      
+      // Calculate BMI
+      const bmi = weight / ((height / 100) ** 2);
+      if (bmi < 18.5) {
+        alert("Safety Check Blocked: Your parameters align below the target safety margin of 18.5 BMI. Please consult a clinician.");
+        return;
+      }
+      nextStep(3);
+    }
+
+    function saveOnboarding() {
+      const name = document.getElementById('user-name').value || "User";
+      const diagnosis = document.getElementById('user-diagnosis').value;
+      const isHighRisk = document.getElementById('med-insulin').checked || document.getElementById('med-sulf').checked;
+
+      const profile = { name, diagnosis, isHighRisk };
+      localStorage.setItem('user_profile', JSON.stringify(profile));
+      
+      document.getElementById('onboarding-modal').classList.add('hidden');
+      loadDashboard();
+    }
+
+    function loadDashboard() {
+      const profile = JSON.parse(localStorage.getItem('user_profile'));
+      if(profile) {
+        document.getElementById('display-name').innerText = profile.name;
+      }
+    }
+
+    function logGlucose() {
+      const val = parseFloat(document.getElementById('glucose-input').value);
+      if(!val) return;
+      latestGlucose = val;
+      
+      document.getElementById('glucose-history').innerText = `Latest Log: ${val} mg/dL right now`;
+      document.getElementById('glucose-input').value = "";
+
+      if(val < 70) {
+        triggerSafety("🚨 Low Blood Sugar Warning", "Your sugar level is below 70 mg/dL. Consume 15 grams of fast-acting carbs (e.g., 4oz fruit juice or sugar packet) immediately. Sit down and rest.", true);
+      } else if (val > 250) {
+        triggerSafety("⚠️ Elevated Blood Sugar", "Glucose is above 250 mg/dL. Stay well hydrated with pure water, monitor closely, and check for ketones if required by your physician.", false);
+      }
+    }
+
+    function triggerSafety(title, msg, runTimer) {
+      document.getElementById('safety-title').innerText = title;
+      document.getElementById('safety-message').innerText = msg;
+      const timerUI = document.getElementById('timer-display');
+      
+      if(runTimer) {
+        timerUI.classList.remove('hidden');
+        let duration = 15 * 60;
+        clearInterval(safetyTimer);
+        safetyTimer = setInterval(() => {
+          let mins = Math.floor(duration / 60);
+          let secs = duration % 60;
+          timerUI.innerText = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+          if(duration <= 0) {
+            clearInterval(safetyTimer);
+            timerUI.innerText = "Re-test Glucose Now!";
+          }
+          duration--;
+        }, 1000);
+      } else {
+        timerUI.classList.add('hidden');
+      }
+      document.getElementById('safety-modal').classList.remove('hidden');
+    }
+
+    function closeSafetyModal() {
+      document.getElementById('safety-modal').classList.add('hidden');
+      clearInterval(safetyTimer);
+    }
+
+    function logMeal() {
+      const cal = parseFloat(document.getElementById('food-cal').value) || 0;
+      const fiber = parseFloat(document.getElementById('food-fiber').value) || 0;
+      
+      dailyCalories += cal;
+      dailyFiber += fiber;
+
+      document.getElementById('summary-cal').innerText = `${dailyCalories} kcal`;
+      document.getElementById('summary-fiber').innerText = `${dailyFiber} g`;
+
+      // Clear fields
+      document.getElementById('food-name').value = "";
+      document.getElementById('food-cal').value = "";
+      document.getElementById('food-carbs').value = "";
+      document.getElementById('food-fiber').value = "";
+
+      // Therapeutic Fiber Limit Tip: target 14g fiber per 1000 kcal
+      const neededFiber = (dailyCalories / 1000) * 14;
+      const tipUI = document.getElementById('fiber-tip');
+      if (dailyFiber < neededFiber) {
+        tipUI.innerText = `💡 Fiber Optimization Tip: Based on your calories logged, try adding legumes, seeds or leafy greens to optimize your daily diagnostic fiber target.`;
+        tipUI.classList.remove('hidden');
+      } else {
+        tipUI.classList.add('hidden');
+      }
+    }
+
+    function checkExerciseSafety() {
+      const out = document.getElementById('clearance-output');
+      out.classList.remove('hidden', 'bg-red-50', 'bg-emerald-50', 'bg-amber-50', 'text-red-800', 'text-emerald-800', 'text-amber-800');
+      
+      if(latestGlucose === null) {
+        out.innerText = "🛑 Please log your blood glucose reading above before starting a structural workout validation loop.";
+        out.classList.add('bg-amber-50', 'text-amber-800');
+        return;
+      }
+
+      if(latestGlucose < 100) {
+        out.innerText = `🛑 Pre-Workout Precaution: Glucose is low (${latestGlucose} mg/dL). Eat 15g of short-chain carbs (like a small fruit) before handling weights to counter exercise-induced crashes.`;
+        out.classList.add('bg-amber-50', 'text-amber-800');
+      } else if (latestGlucose > 250) {
+        out.innerText = `🛑 Activity Suspended: Glucose is critically high (${latestGlucose} mg/dL). Strenuous activity may inadvertently spike hormone stress and glucose further. Let levels equalize first.`;
+        out.classList.add('bg-red-50', 'text-red-800');
+      } else {
+        out.innerText = `✅ Clearance Authorized: Your current reading of ${latestGlucose} mg/dL falls within standard clinical thresholds. Maintain hydration during sets.`;
+        out.classList.add('bg-emerald-50', 'text-emerald-800');
+      }
+    }
+
+    // Register Service Worker to turn it into an installable application setup
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js')
+        .then(() => console.log('PWA active.'))
+        .catch((err) => console.log('SW registration error', err));
+    }
+  </script>
+</body>
+</html>
